@@ -5,6 +5,7 @@ target 'DIExample' do
   pod "RxSwift"
   pod "RxCocoa"
   pod "Alamofire"
+  pod 'AlamofireObjectMapper'
   pod "Swinject"
 
   target 'DIExampleTests' do
