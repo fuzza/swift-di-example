@@ -1,0 +1,38 @@
+import Foundation
+import Swinject
+
+{% macro resolveClosureArgs paramsArray %}r{% for param in paramsArray %}{% if not param.type or not param.type.annotations.injectable %}, {{ param.argumentLabel }}{% endif %}{% endfor %} in{% endmacro %}
+
+{% macro resolveParams paramsArray %}
+{% for param in paramsArray %}
+        {% if param.argumentLabel %}{{param.argumentLabel}}: {% endif %}{% call resolve param %}{% if not forloop.last%}, {% endif %}
+{% endfor %}
+{% endmacro %}
+
+{% macro resolve param %}{% if param.type and param.type.annotations.injectable %}r.resolve({{ param.type.name }}.self)!{% else %}{{ param.argumentLabel }}{% endif %}{% endmacro %}
+
+{% macro resolveScope type %}{% if type.annotations.singleton %}.container{% else %}.transient{% endif %}{% endmacro %}
+
+class ApplicationAssembly: Assembly {
+  func assemble(container: Container) {
+    {% for type in types.all|annotated:"injectable" %}
+    {% if type.methods|annotated:"inject" %}
+    {% for method in type.methods|annotated:"inject" %}
+    {% if method.isInitializer %}
+    container.register({{type.name}}.self) { {% call resolveClosureArgs method.parameters %}
+      return {{type.name}}(
+         {% call resolveParams method.parameters %}
+      )
+    }.inObjectScope({% call resolveScope type %})
+
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    container.register({{type.name}}.self) { r in
+      return {{type.name}}()
+    }.inObjectScope({% call resolveScope type %})
+
+    {% endif %}
+    {% endfor %}
+  }
+}
